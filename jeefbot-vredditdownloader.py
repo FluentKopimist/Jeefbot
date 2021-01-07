@@ -1,20 +1,27 @@
 import requests
 import os
 import json
+import subprocess
 import ffmpeg
 
-#reddit_url = "https://old.reddit.com/r/aww/comments/kr98n2/the_corgi_express/"#vreddit video url with no audio
-reddit_url = "https://old.reddit.com/r/leagueoflegends/comments/88rypt/jesus_christ_if_this_gets_enough_upvotes_it_will/" #example reddit url
-#reddit_url = "https://old.reddit.com/r/nextfuckinglevel/comments/kn8qs4/dont_touch_the_trash_can/" #regular vreddit video with audio
+#creates working directory
+#current_dir = os.getcwd() <gets program's current directory, currently messed up because of the space in my username
+current_dir = "c:\jeefbot"
+temp_dir = os.path.join(current_dir, r'temp')
+if not os.path.exists(temp_dir):
+   os.makedirs(temp_dir)
+
+#-----------------------------------------------create log file here
+
+#example reddit urls, uncomment as needed for debugging
+
+#reddit_url = "https://old.reddit.com/r/aww/comments/kr98n2/the_corgi_express/"#example vreddit webm with no audio
+#reddit_url = "https://old.reddit.com/r/leagueoflegends/comments/88rypt/jesus_christ_if_this_gets_enough_upvotes_it_will/" #example reddit url containing no audio or video
+reddit_url = "https://old.reddit.com/r/nextfuckinglevel/comments/kn8qs4/dont_touch_the_trash_can/" #example vreddit webm with audio
+
 json_url = reddit_url + ".json"
 r = requests.get(json_url, headers={'User-agent': 'JeefBot'}) #connect to reddit using fake user agent so it doesn't kick us out for avoiding their api
 r_dict = json.loads(r.text) #creates dictionary file with our json so we may query it for the values we need
-
-#def create working directory
-current_directory = os.getcwd()
-final_directory = os.path.join(current_directory, r'Temp')
-if not os.path.exists(final_directory):
-   os.makedirs(final_directory)
 
 try:
     video_url = r_dict[0]['data']['children'][0]['data']['secure_media']['reddit_video']['fallback_url'] #filter .json for video url
@@ -24,9 +31,37 @@ try:
 except:
     print ("As far as I can tell the url at:")
     print (reddit_url) 
-    print ("Does not contain any video source.")
-    print ("Please try another url.")
-    from time import sleep
-    sleep(5)
+    print ("Does not contain any video source.") #-------------------------------------------log it instead of print
+
+try:
+#video_identifier will be a global variable that will increment by 1 every time this is ran
+#i would assume audio_name will be the same, ffmpeg will combine both with same number scheme + _audio or _video
+#and append .mp4 to the end
+    r = requests.get(video_url, stream = True) #requesting video from reddit
+    with open(os.path.join(temp_dir ,'video.mp4'), "wb") as f:
+        for chunk in r.iter_content(chunk_size = 16*1024): #request file in chunks for speed and less ram usage
+            f.write(chunk)
+except:
+    print ("Something went wrong with the video request. probably bad url.")
+    
+try:
+    r = requests.get(audio_url, stream = True)
+    with open(os.path.join(temp_dir ,'audio.mp4'), "wb") as f:
+        for chunk in r.iter_content(chunk_size = 16*1024): #request file in chunks for speed and less ram usage
+            f.write(chunk)
+except:
+    print ("No audio found, this video probably doesnt contain any audio source.")
+
+ # combining audio and video into one file
+print("combining audio and video into one file")
+uncompressed_path = os.path.join(temp_dir, 'uncompressed.mp4')
+subprocess.call(f"ffmpeg.exe -i {os.path.join(temp_dir ,'video.mp4')} -i {os.path.join(temp_dir ,'audio.mp4')} -c copy {uncompressed_path}", shell=True)
+
+# compressing the video
+print("compressing the video")
+compressed_path = os.path.join(temp_dir, 'compressed.mp4')
+subprocess.call(f"ffmpeg.exe -i {uncompressed_path} -crf 30 {compressed_path}", shell=True)
+    
+    
 
 ## todo Use requests to download files, use ffmpeg to put the audio and video together. learn how to use this in a discord bot setting.
