@@ -13,19 +13,19 @@ import ffmpeg
 def main():
     
     #uncomment whichever reddit url needed for debug
-    #reddit_url = "https://old.reddit.com/r/aww/comments/kr98n2/the_corgi_express/"#example vreddit webm with no audio
+    reddit_url = "https://old.reddit.com/r/aww/comments/kr98n2/the_corgi_express/"#example vreddit webm with no audio
     #reddit_url = "https://old.reddit.com/r/leagueoflegends/comments/88rypt/jesus_christ_if_this_gets_enough_upvotes_it_will/" #example reddit url containing no audio or video
-    reddit_url = "https://old.reddit.com/r/nextfuckinglevel/comments/kn8qs4/dont_touch_the_trash_can/" #example vreddit webm with audio
+    #reddit_url = "https://old.reddit.com/r/nextfuckinglevel/comments/kn8qs4/dont_touch_the_trash_can/" #example vreddit webm with audio
     #reddit_url = "https://old.reddit.com/r/Madrid/comments/hopsfy/theres_a_lot_to_be_said_but_i_just_cant/"
     #reddit_url = "https://old.reddit.com/r/PublicFreakout/comments/jgl8dn/most_polite_arrest_ever/"
     #reddit_url = "https://old.reddit.com/r/wallstreetbets/comments/l782pi/buy_gamestop_stock_wsb_pulled_from_twitter_the/"
     #reddit_url = "https://old.reddit.com/r/wallstreetbets/comments/lcjgc2/this_sub/"
-    #reddit_url = input("Reddit url: ")
+    reddit_url = input("Reddit url: ")
     id = increment_video_id()
     
     download_vreddit_video(reddit_url) #==================================== Apparently you cant return multiple values. look into dictionaries maybe?
 
-    uncompressed_path = combine_with_ffmpeg()
+    #uncompressed_path = combine_with_ffmpeg()
 
     return 0
     
@@ -83,46 +83,43 @@ def download_vreddit_video(reddit_url):
     b = os.path.getsize(os.path.join(working_dir ,'audio_' + str(id) + '.mp4')) #requests still manages to download mp3's when there arent any, this checks the size of the file and returns false if the file contains no data
     print (b)
     if b > 250:
-        #combine_with_ffmpeg()
+        combine_with_ffmpeg()
         return
     else:
         print ("No audio found, this video probably doesnt contain any audio source.")
         os.remove(os.path.join(working_dir ,'audio_' + str(id) + '.mp4'))
+        os.startfile('video_' + str(id) + '.mp4')
     
     return;
 
 def combine_with_ffmpeg():
+    
     # combining audio and video into one file
     print("Combining audio and video into one file")
     uncompressed_path = os.path.join(working_dir, 'uncompressed_' + str(id) + '.mp4')
     subprocess.call(f"ffmpeg.exe -hide_banner -loglevel fatal -i {os.path.join(working_dir ,'video_' + id + '.mp4')} -i {os.path.join(working_dir ,'audio_' + id + '.mp4')} -c copy {uncompressed_path}", shell=True)#quiet
     #subprocess.call(f"ffmpeg.exe -hide_banner -i {os.path.join(working_dir ,'video_' + id + '.mp4')} -i {os.path.join(working_dir ,'audio_' + id + '.mp4')} -c copy {uncompressed_path}", shell=True)#loud
-    print ("Saved at " + uncompressed_path ) # for less verbosity use -hide_banner -loglevel fatal to only print fatal warnings
+    #for less verbosity use -hide_banner -loglevel fatal to only print fatal warnings
+    print ("Saved at " + uncompressed_path ) 
     b = os.path.getsize(os.path.join(working_dir ,'video_' + str(id) + '.mp4')) #requests still manages to download mp3's when there arent any, this checks the size of the file and returns false if the file contains no data
     print (b)
+    
     if b > 8000000:
+        
         print ("Webm larger than 8 MB... Discord won't accept it without Nitro.")
         print("Jeef will compress it for you.")
         compress_with_ffmpeg(uncompressed_path)
         
         return uncompressed_path;
     else:
-        '''
-        print("This file is small enough to fit on discord. Would you still like to compress the video file to save space? Y/N?")
-        x = input()
-        if x == "Y" or "y":
-            compress_with_ffmpeg(uncompressed_path)
-        elif x == "N" or "n":
-            os.startfile(uncompressed_path)
-            quit()
-        else:
-            os.startfile(uncompressed_path)
-            quit()
-         '''
+
+        print ("deleting extra files... ")
         os.remove(os.path.join(working_dir ,'audio_' + str(id) + '.mp4'))
+        print ('audio_' + str(id) + '.mp4')
         os.remove(os.path.join(working_dir ,'video_' + str(id) + '.mp4'))
+        print('video_' + str(id) + '.mp4')
         os.startfile(uncompressed_path)
-        quit()
+
         return;
 
 
@@ -144,6 +141,7 @@ def compress_with_ffmpeg(uncompressed_path):
             old_compressed_path = compressed_path
             
             #print (b, " routine 1 ", y) #debug
+        
         else:
             old_compressed_path = compressed_path
             compressed_path = os.path.join(working_dir ,'compressed_' + str(y) + '.mp4')
@@ -152,16 +150,22 @@ def compress_with_ffmpeg(uncompressed_path):
             
             #print (b, " routine 2 ", y) #debug
             
-        
+    print("compression successful, saved at " + compressed_path)
+    print ("completed in ", y ,"passes")
         
     print ("deleting extra files...")
+
     os.remove(os.path.join(working_dir ,'uncompressed_' + str(id) + '.mp4'))
     while i < y:
         os.remove(os.path.join(working_dir ,'compressed_' + str(i) + '.mp4'))
+        print ('compressed_' + str(i) + '.mp4')
         i += 1
-        
-    print("compression successful, saved at " + compressed_path)
-    print ("completed in ", y ,"passes")
+            
+    os.remove(os.path.join(working_dir ,'audio_' + str(id) + '.mp4'))
+    print ('audio_' + str(id) + '.mp4')
+    os.remove(os.path.join(working_dir ,'video_' + str(id) + '.mp4'))
+    print('video_' + str(id) + '.mp4')
+    
     os.startfile(compressed_path)
     
     
