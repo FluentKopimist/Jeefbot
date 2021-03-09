@@ -1,8 +1,10 @@
 import requests
+import sys
 import os
 import json
 import subprocess
 import ffmpeg
+
 
 #This is a vredditdownloader function I am writing, to be implemented into a discord bot called "JeefBot" sometime in the future.
 
@@ -13,17 +15,19 @@ def main():
     #uncomment whichever reddit url needed for debug
     #reddit_url = "https://old.reddit.com/r/aww/comments/kr98n2/the_corgi_express/"#example vreddit webm with no audio
     #reddit_url = "https://old.reddit.com/r/leagueoflegends/comments/88rypt/jesus_christ_if_this_gets_enough_upvotes_it_will/" #example reddit url containing no audio or video
-    #reddit_url = "https://old.reddit.com/r/nextfuckinglevel/comments/kn8qs4/dont_touch_the_trash_can/" #example vreddit webm with audio
+    reddit_url = "https://old.reddit.com/r/nextfuckinglevel/comments/kn8qs4/dont_touch_the_trash_can/" #example vreddit webm with audio
     #reddit_url = "https://old.reddit.com/r/Madrid/comments/hopsfy/theres_a_lot_to_be_said_but_i_just_cant/"
     #reddit_url = "https://old.reddit.com/r/PublicFreakout/comments/jgl8dn/most_polite_arrest_ever/"
     #reddit_url = "https://old.reddit.com/r/wallstreetbets/comments/l782pi/buy_gamestop_stock_wsb_pulled_from_twitter_the/"
     #reddit_url = "https://old.reddit.com/r/wallstreetbets/comments/lcjgc2/this_sub/"
-    reddit_url = input("Reddit url: ")
+    #reddit_url = input("Reddit url: ")
     id = increment_video_id()
     
     download_vreddit_video(reddit_url) #==================================== Apparently you cant return multiple values. look into dictionaries maybe?
 
     uncompressed_path = combine_with_ffmpeg()
+
+    return 0
     
     
 
@@ -104,7 +108,7 @@ def combine_with_ffmpeg():
         return uncompressed_path;
     else:
         '''
-        print("This file is small enough to fit on discord. Would you still like to compress the video file? Y/N?")
+        print("This file is small enough to fit on discord. Would you still like to compress the video file to save space? Y/N?")
         x = input()
         if x == "Y" or "y":
             compress_with_ffmpeg(uncompressed_path)
@@ -115,6 +119,8 @@ def combine_with_ffmpeg():
             os.startfile(uncompressed_path)
             quit()
          '''
+        os.remove(os.path.join(working_dir ,'audio_' + str(id) + '.mp4'))
+        os.remove(os.path.join(working_dir ,'video_' + str(id) + '.mp4'))
         os.startfile(uncompressed_path)
         quit()
         return;
@@ -122,12 +128,42 @@ def combine_with_ffmpeg():
 
 def compress_with_ffmpeg(uncompressed_path):
     print ("Compressing...")
-    compressed_path = os.path.join(working_dir, 'compressed_' + str(id) + '.mp4')
-    subprocess.call(f"ffmpeg.exe -hide_banner -loglevel fatal -i {uncompressed_path} -crf 30 {compressed_path}", shell=True)#quiet
-    #subprocess.call(f"ffmpeg.exe -hide_banner -i {uncompressed_path} -crf 30 {compressed_path}", shell=True)#loud
+    b = os.path.getsize(os.path.join(working_dir ,'video_' + str(id) + '.mp4'))
+    y = 0 
+    i = 1
+    while b >= 8000000 :
+        
+        print ("Current Pass: ", y, " ", b/1000000, "mb", end='\r')
+        y += 1
+
+        if y == 1 :
+            compressed_path = os.path.join(working_dir ,'compressed_' + str(y) + '.mp4')
+            subprocess.call(f"ffmpeg.exe -hide_banner -loglevel fatal -i {uncompressed_path} -crf 30 {compressed_path}", shell=True)#quiet
+            #subprocess.call(f"ffmpeg.exe -hide_banner -i {uncompressed_path} -crf 30 {compressed_path}", shell=True)#loud
+            b = os.path.getsize(os.path.join(working_dir ,'compressed_' + str(y) + '.mp4'))
+            old_compressed_path = compressed_path
+            
+            #print (b, " routine 1 ", y) #debug
+        else:
+            old_compressed_path = compressed_path
+            compressed_path = os.path.join(working_dir ,'compressed_' + str(y) + '.mp4')
+            subprocess.call(f"ffmpeg.exe -hide_banner -loglevel fatal -i {old_compressed_path} -crf 30 {compressed_path}", shell=True)#quiet
+            b = os.path.getsize(os.path.join(working_dir ,'compressed_' + str(y) + '.mp4'))
+            
+            #print (b, " routine 2 ", y) #debug
+            
+        
+        
+    print ("deleting extra files...")
+    os.remove(os.path.join(working_dir ,'uncompressed_' + str(id) + '.mp4'))
+    while i < y:
+        os.remove(os.path.join(working_dir ,'compressed_' + str(i) + '.mp4'))
+        i += 1
+        
     print("compression successful, saved at " + compressed_path)
+    print ("completed in ", y ,"passes")
     os.startfile(compressed_path)
-    quit()
+    
     
 
 
